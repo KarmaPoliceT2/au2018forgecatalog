@@ -1,6 +1,7 @@
+from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
 from ..Memo import Memo
-import requests
+import requests, json
 
 # ////////////////////////////////////////////////////////////////////////////
 # Helper Functions
@@ -69,14 +70,90 @@ def getFLCTokenMemo(tenant, client_id, client_secret):
     return getFLCToken(tenant, client_id, client_secret)
 
 
+# Get FLC Categories from FLC
+def getFLCPickList(token, pickListId):
+    base_url = "https://" + token["customerToken"] + ".autodeskplm360.net"
+    url_pick = base_url + "/api/rest/v1/setups/picklists"
+    get_url = url_pick + "/" + pickListId
+
+    headers = {
+        "Cookie": "customer="
+        + token["customerToken"]
+        + ";JSESSIONID="
+        + token["sessionid"]
+    }
+
+    r = requests.get(get_url, headers=headers)
+
+    if 200 == r.status_code:
+        return r.json()
+
+    return None
+
+
+# Get FLC Items
+def getFLCProductsByCategory(token, category):
+    base_url = "https://" + token["customerToken"] + ".autodeskplm360.net"
+    get_url = base_url + "/api/rest/v1/workspaces/65/items?includeRelationships=false"
+
+    headers = {
+        "Cookie": "customer="
+        + token["customerToken"]
+        + ";JSESSIONID="
+        + token["sessionid"]
+    }
+
+    r = requests.get(get_url, headers=headers)
+
+    if 200 == r.status_code:
+        products = r.json()
+        matching_products = []
+        if products["list"] is not None:
+            for product in products["list"]["item"]:
+                for field in product["metaFields"]["entry"]:
+                    if (field["key"] == "PART_CATEGORY") and (
+                        field["fieldData"]["label"] == category
+                    ):
+                        matching_products.append(product)
+
+        return matching_products
+
+    return None
+
+
+# Get FLC Item
+def getFLCProduct(token, dmsId):
+    base_url = "https://" + token["customerToken"] + ".autodeskplm360.net"
+    get_url = (
+        base_url
+        + "/api/rest/v1/workspaces/65/items/"
+        + dmsId
+        + "?includeRelationships=false"
+    )
+
+    headers = {
+        "Cookie": "customer="
+        + token["customerToken"]
+        + ";JSESSIONID="
+        + token["sessionid"]
+    }
+
+    r = requests.get(get_url, headers=headers)
+
+    if 200 == r.status_code:
+        return r.json()
+
+    return None
+
+
 # ////////////////////////////////////////////////////////////////////////////
 # Views
 # ////////////////////////////////////////////////////////////////////////////
 
 # @view_config(route_name='home', renderer='../templates/mytemplate.jinja2')
-@view_config(route_name="home", renderer="../templates/bootstraptest.jinja2")
-def my_view(request):
-    return {"project": "au2018forgecatalog"}
+# @view_config(route_name="home", renderer="../templates/bootstraptest.jinja2")
+# def my_view(request):
+#    return {"project": "au2018forgecatalog"}
 
 
 # /forge/token
@@ -94,3 +171,63 @@ def flc_token(request):
         credentials["tenant"], credentials["id"], credentials["secret"]
     )
 
+
+# /home
+@view_config(route_name="home", renderer="json")
+def home_view(request):
+    try:
+        credentials = getCredentials(request.registry.settings, "FLC")
+        token = getFLCTokenMemo(
+            credentials["tenant"], credentials["id"], credentials["secret"]
+        )
+        categories = getFLCPickList(token, "CUSTOM_LOOKUP_PART_CATEGORIES")
+
+        if categories is None:
+            raise HTTPNotFound()
+
+        return categories
+
+    except:
+        raise HTTPNotFound()
+
+
+# /category/{category}
+@view_config(route_name="category", renderer="json")
+def category_view(request):
+    try:
+        category = request.matchdict["category"]
+        credentials = getCredentials(request.registry.settings, "FLC")
+        token = getFLCTokenMemo(
+            credentials["tenant"], credentials["id"], credentials["secret"]
+        )
+
+        products = getFLCProductsByCategory(token, category)
+
+        if products is None:
+            raise HTTPNotFound()
+
+        return products
+
+    except:
+        raise HTTPNotFound()
+
+
+# /product/{dmsId}
+@view_config(route_name="product", renderer="json")
+def product_view(request):
+    try:
+        dmsId = request.matchdict["dmsId"]
+        credentials = getCredentials(request.registry.settings, "FLC")
+        token = getFLCTokenMemo(
+            credentials["tenant"], credentials["id"], credentials["secret"]
+        )
+
+        products = getFLCProduct(token, dmsId)
+
+        if products is None:
+            raise HTTPNotFound()
+
+        return products
+
+    except:
+        raise HTTPNotFound()
