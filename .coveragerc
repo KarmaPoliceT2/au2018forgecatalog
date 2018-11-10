@@ -1,0 +1,3 @@
+[run]
+source = au2018forgecatalog
+omit = au2018forgecatalog/test*
