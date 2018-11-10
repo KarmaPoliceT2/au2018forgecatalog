@@ -1,5 +1,6 @@
 from pyramid.view import view_config
-import os, requests
+from ..Memo import Memo
+import requests
 
 # ////////////////////////////////////////////////////////////////////////////
 # Helper Functions
@@ -9,14 +10,14 @@ import os, requests
 def getCredentials(settings, software):
     if software == "Forge":
         credentials = {
-            "id": os.environ[settings["forge_client"]],
-            "secret": os.environ[settings["forge_secret"]],
+            "id": settings["forge_client"],
+            "secret": settings["forge_secret"],
         }
     if software == "FLC":
         credentials = {
-            "tenant": os.environ[settings["flc_tenant_id"]],
-            "id": os.environ[settings["flc_user_id"]],
-            "secret": os.environ[settings["flc_password"]],
+            "tenant": settings["flc_tenant_id"],
+            "id": settings["flc_user_id"],
+            "secret": settings["flc_password"],
         }
     return credentials
 
@@ -41,6 +42,12 @@ def getForgeToken(client_id, client_secret):
     return None
 
 
+# Memoize the Forge Token
+@Memo(timeout=3580)
+def getForgeTokenMemo(client_id, client_secret):
+    return getForgeToken(client_id, client_secret)
+
+
 # Get FLC Token from FLC
 def getFLCToken(tenant, client_id, client_secret):
     base_url = "https://" + tenant + ".autodeskplm360.net"
@@ -54,6 +61,12 @@ def getFLCToken(tenant, client_id, client_secret):
         return r.json()
 
     return None
+
+
+# Memoize the FLC Token
+@Memo(timeout=880)
+def getFLCTokenMemo(tenant, client_id, client_secret):
+    return getFLCToken(tenant, client_id, client_secret)
 
 
 # ////////////////////////////////////////////////////////////////////////////
@@ -70,12 +83,14 @@ def my_view(request):
 @view_config(route_name="forge-token", renderer="json")
 def forge_token(request):
     credentials = getCredentials(request.registry.settings, "Forge")
-    return getForgeToken(credentials["id"], credentials["secret"])
+    return getForgeTokenMemo(credentials["id"], credentials["secret"])
 
 
 # /flc/token
-@view_config(route_name="flc-token", render="json")
+@view_config(route_name="flc-token", renderer="json")
 def flc_token(request):
     credentials = getCredentials(request.registry.settings, "FLC")
-    return getFLCToken(credentials["tenant"], credentials["id"], credentials["secret"])
+    return getFLCTokenMemo(
+        credentials["tenant"], credentials["id"], credentials["secret"]
+    )
 
