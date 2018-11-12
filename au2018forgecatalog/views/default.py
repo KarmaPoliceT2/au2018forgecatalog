@@ -173,9 +173,11 @@ def flc_token(request):
 
 
 # /home
-@view_config(route_name="home", renderer="json")
+@view_config(route_name="home", renderer="../templates/home.jinja2")
+# @view_config(route_name="home", renderer="json")
 def home_view(request):
     try:
+        # catnames = []
         credentials = getCredentials(request.registry.settings, "FLC")
         token = getFLCTokenMemo(
             credentials["tenant"], credentials["id"], credentials["secret"]
@@ -184,6 +186,9 @@ def home_view(request):
 
         if categories is None:
             raise HTTPNotFound()
+
+        # for category in categories["picklist"]["values"]:
+        #    catnames.append(category)
 
         return categories
 

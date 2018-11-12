@@ -4,7 +4,7 @@
 
 		<!-- Meta -->
 		<meta charset="UTF-8">
-		<title>PartsCo | 404 Error Page</title>
+		<title>PartsCo | Home Page</title>
 		<meta name="keywords" content="PartsCo, Catalog, AU2018">
 		<meta name="description" content="PartsCo - Catalog Demo For AU2018">
 		<meta name="author" content="Chris Gill">
@@ -49,6 +49,12 @@
 				<h2>Minimalistic &amp; Elegant</h2>
 			</header>
 
+			<!-- Fullscreen slider navigation arrows -->
+			<nav id="nav-arrows">
+				<a href="#" class="nav-left hidden"></a>
+				<a href="#" class="nav-right"></a>
+			</nav>
+
 		</div>
 
 		<!-- Main wrapper -->
@@ -57,47 +63,18 @@
 			<!-- Content -->
 			<div id="content">
 
-				<!-- Fluid container -->
-				<div class="container-fluid">
+				<!-- Fullscreen slider -->
+				<div id="fullscreen-slider" class="swiper-container">
+					<div class="swiper-wrapper">
 
-					<!-- Page heading -->
-					<div id="heading" class="row">
-						<div class="col-12">
-
-							<header>
-								<h1>Error 404</h1>
-								<h2>Page not found</h2>
-							</header>
-
-						</div>
-					</div>
-
-					<!-- Main content -->
-					<div class="row">
-						<div class="main-column col-12">
-
-							<!-- Inner -->
-							<div class="inner">
-
-								<div class="row">
-									<div class="col-12">
-
-										<p>The page you have requested does not exists.</p>
-										<p>Perhaps you are here because:</p>
-										<ul class="fa-ul">
-											<li><i class="fa-li fa fa-angle-right"></i>The page has moved</li>
-											<li><i class="fa-li fa fa-angle-right"></i>The page is deleted</li>
-											<li><i class="fa-li fa fa-angle-right"></i>You like 404 pages</li>
-										</ul>
-
-									</div>
-								</div>
-
+						{% for category in picklist["values"] %}
+							<!-- Slide -->
+							<div class="swiper-slide overlay overlay-dark-25" style="background-image: url({{request.static_url('au2018forgecatalog:static/img/slides/'+category['label']+'.jpg')}})">
+								<a href="/category/{{category.label|e}}"><h1>{{category.label|e}}</h1></a>
 							</div>
+						{% endfor %}
 
-						</div>
 					</div>
-
 				</div>
 
 			</div>
@@ -111,13 +88,13 @@
 					<!-- Main menu -->
 					<nav id="mainmenu">
 						<ul>
-							<li><a href="/">Home</a></li>
+							<li><a href="/" class="active">Home</a></li>
 							<li>
 								<a href="#">Product Categories</a>
 								<ul>
-									<li><a href="portfolio-2.html">2 Columns</a></li>
-									<li><a href="portfolio-3.html">3 Columns</a></li>
-									<li><a href="portfolio-4.html">4 Columns</a></li>
+									<li><a href="/category/Instruments">Instruments</a></li>
+									<li><a href="/category/Vehicles">Vehicles</a></li>
+									<li><a href="/category/Tools">Tools</a></li>
 								</ul>
 							</li>
 							<li><a href="/about">About</a></li>
