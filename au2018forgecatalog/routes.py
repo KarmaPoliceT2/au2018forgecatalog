@@ -5,3 +5,4 @@ def includeme(config):
     config.add_route("product", "/product/{dmsId}")
     config.add_route("forge-token", "/forge/token")
     config.add_route("flc-token", "/flc/token")
+    config.add_route("forge-thumbnail", "/forge/thumbnail")

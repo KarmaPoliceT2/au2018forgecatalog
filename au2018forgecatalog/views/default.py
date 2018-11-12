@@ -1,7 +1,8 @@
 from pyramid.httpexceptions import HTTPFound, HTTPNotFound
 from pyramid.view import view_config
+from pyramid.response import Response
 from ..Memo import Memo
-import requests, json
+import requests, json, base64
 
 # ////////////////////////////////////////////////////////////////////////////
 # Helper Functions
@@ -32,7 +33,7 @@ def getForgeToken(client_id, client_secret):
         "grant_type": "client_credentials",
         "client_secret": client_secret,
         "client_id": client_id,
-        "scope": "viewables:read",
+        "scope": "bucket:read data:read viewables:read data:write",
     }
 
     r = requests.post(url_auth, data=data)
@@ -94,7 +95,9 @@ def getFLCPickList(token, pickListId):
 # Get FLC Items
 def getFLCProductsByCategory(token, category):
     base_url = "https://" + token["customerToken"] + ".autodeskplm360.net"
-    get_url = base_url + "/api/rest/v1/workspaces/65/items?includeRelationships=false"
+    get_url = (
+        base_url + "/api/rest/v1/workspaces/65/items?includeRelationships=false&size=20"
+    )
 
     headers = {
         "Cookie": "customer="
@@ -114,9 +117,14 @@ def getFLCProductsByCategory(token, category):
                     if (field["key"] == "PART_CATEGORY") and (
                         field["fieldData"]["label"] == category
                     ):
-                        matching_products.append(product)
+                        if (
+                            product["details"]["workflowState"]["stateName"]
+                            == "Released"
+                        ):
+                            matching_products.append(product)
 
         return matching_products
+        # return products
 
     return None
 
@@ -142,6 +150,22 @@ def getFLCProduct(token, dmsId):
 
     if 200 == r.status_code:
         return r.json()
+
+    return None
+
+
+# Get Forge Thumbnail
+def getForgeThumbnail(token, urn):
+    base_url = "https://developer.api.autodesk.com"
+    get_url = base_url + "/modelderivative/v2/designdata/{}/thumbnail?{}"
+    query = "width=400&height=400"
+    headers = {"Authorization": "Bearer " + token["access_token"]}
+    print(urn)
+    print(get_url.format(urn, query))
+    r = requests.get(get_url.format(urn, query), headers=headers)
+
+    if 200 == r.status_code:
+        return r.content
 
     return None
 
@@ -177,7 +201,6 @@ def flc_token(request):
 # @view_config(route_name="home", renderer="json")
 def home_view(request):
     try:
-        # catnames = []
         credentials = getCredentials(request.registry.settings, "FLC")
         token = getFLCTokenMemo(
             credentials["tenant"], credentials["id"], credentials["secret"]
@@ -187,9 +210,6 @@ def home_view(request):
         if categories is None:
             raise HTTPNotFound()
 
-        # for category in categories["picklist"]["values"]:
-        #    catnames.append(category)
-
         return categories
 
     except:
@@ -197,9 +217,11 @@ def home_view(request):
 
 
 # /category/{category}
-@view_config(route_name="category", renderer="json")
+@view_config(route_name="category", renderer="../templates/category.jinja2")
+# @view_config(route_name="category", renderer="json")
 def category_view(request):
     try:
+        ret = {}
         category = request.matchdict["category"]
         credentials = getCredentials(request.registry.settings, "FLC")
         token = getFLCTokenMemo(
@@ -211,14 +233,17 @@ def category_view(request):
         if products is None:
             raise HTTPNotFound()
 
-        return products
+        ret["category"] = category
+        ret["products"] = products
+        return ret
 
     except:
         raise HTTPNotFound()
 
 
 # /product/{dmsId}
-@view_config(route_name="product", renderer="json")
+@view_config(route_name="product", renderer="../templates/product.jinja2")
+# @view_config(route_name="product", renderer="json")
 def product_view(request):
     try:
         dmsId = request.matchdict["dmsId"]
@@ -227,12 +252,30 @@ def product_view(request):
             credentials["tenant"], credentials["id"], credentials["secret"]
         )
 
-        products = getFLCProduct(token, dmsId)
+        product = getFLCProduct(token, dmsId)
 
-        if products is None:
+        if product is None:
             raise HTTPNotFound()
-
-        return products
+        ret = {}
+        ret["token_url"] = "/forge/token"
+        ret["product"] = product["item"]
+        return ret
 
     except:
         raise HTTPNotFound()
+
+
+# /forge/thumbnail?id
+@view_config(route_name="forge-thumbnail")
+def forge_thumbnail(request):
+    try:
+        urn = request.params["id"]
+        credentials = getCredentials(request.registry.settings, "Forge")
+        token = getForgeTokenMemo(credentials["id"], credentials["secret"])
+        thumbnail = getForgeThumbnail(token, urn)
+
+        return Response(thumbnail, content_type="image/png")
+
+    except:
+
+        return HTTPNotFound()

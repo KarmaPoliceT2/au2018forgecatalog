@@ -4,7 +4,7 @@
 
 		<!-- Meta -->
 		<meta charset="UTF-8">
-		<title>PartsCo | 404 Error Page</title>
+		<title>PartsCo | Product Details</title>
 		<meta name="keywords" content="PartsCo, Catalog, AU2018">
 		<meta name="description" content="PartsCo - Catalog Demo For AU2018">
 		<meta name="author" content="Chris Gill">
@@ -22,6 +22,7 @@
 		<link rel="stylesheet" href="{{request.static_url('au2018forgecatalog:static/css/bootstrap.min.css')}}">
 		<link rel="stylesheet" href="{{request.static_url('au2018forgecatalog:static/css/font-awesome.min.css')}}">
 		<link href="http://fonts.googleapis.com/css?family=Raleway:300|Muli:300" rel="stylesheet" type="text/css">
+		<link rel="stylesheet" href="https://developer.api.autodesk.com/derivativeservice/v2/viewers/style.min.css" type="text/css" media="screen" charset="utf-8"/>
 		<link rel="stylesheet" href="{{request.static_url('au2018forgecatalog:static/css/idangerous.swiper.css')}}">
 		<link rel="stylesheet" href="{{request.static_url('au2018forgecatalog:static/css/style.css')}}">
 
@@ -65,8 +66,16 @@
 						<div class="col-12">
 
 							<header>
-								<h1>Error 404</h1>
-								<h2>Page not found</h2>
+								{% for field in product["metaFields"]["entry"] %}
+								{% if field["key"] == "PART_NAME" %}
+								<h1>{{ field["fieldData"]["value"] }}</h1>
+								{% endif %}
+								{% if field["key"] == "PART_DESCRIPTION" %}
+								<br/><h2><b>Description: </b>{{ field["fieldData"]["value"] }}</h2>
+								{% endif %}
+								{% endfor %}
+								<br/><h2><b>Part Number:</b> {{ product["description"] }}</h2>
+								<br/><h2><b>Last Modified:</b> {{ product["details"]["lastModified"] }}</h2>
 							</header>
 
 						</div>
@@ -74,26 +83,28 @@
 
 					<!-- Main content -->
 					<div class="row">
-						<div class="main-column col-12">
+						<div class="col-12">
 
 							<!-- Inner -->
-							<div class="inner">
+							<article class="inner">
 
-								<div class="row">
-									<div class="col-12">
-
-										<p>The page you have requested does not exists.</p>
-										<p>Perhaps you are here because:</p>
-										<ul class="fa-ul">
-											<li><i class="fa-li fa fa-angle-right"></i>The page has moved</li>
-											<li><i class="fa-li fa fa-angle-right"></i>The page is deleted</li>
-											<li><i class="fa-li fa fa-angle-right"></i>You like 404 pages</li>
-										</ul>
-
-									</div>
-								</div>
-
+							<!-- Viewer -->
+							<div class="row" style="margin:auto;">
+									<div class="col-12" style="padding-left:0px;">
+							<div class=viewer id=viewer style="height: 100vh; width: 100vw;">
+							<script type="text/javascript" src="https://developer.api.autodesk.com/derivativeservice/v2/viewers/viewer3D.min.js"></script>
+							<script type="text/javascript" src="{{request.static_url('au2018forgecatalog:static/js/viewer.js')}}"></script>
+							{% for field in product["metaFields"]["entry"] %}
+							{% if field["key"] == "URN" %}
+							<script type="text/javascript">
+								loadURN("{{token_url}}", "{{ field['fieldData']['value'].rstrip('=') }}")
+							</script>
+							{% endif %}
+							{% endfor %}
 							</div>
+							</div>
+							</div>
+							</article>
 
 						</div>
 					</div>
@@ -111,7 +122,7 @@
 					<!-- Main menu -->
 					<nav id="mainmenu">
 						<ul>
-							<li><a href="/">Home</a></li>
+							<li><a href="/" class="active">Home</a></li>
 							<li>
 								<a href="#">Product Categories</a>
 								<ul>
